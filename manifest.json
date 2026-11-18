@@ -1,6 +1,6 @@
 {
-  "name": "Mis Gastos",
-  "short_name": "Gastos",
+  "name": "Tomin 日課",
+  "short_name": "Tomin 日課",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

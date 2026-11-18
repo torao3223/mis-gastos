@@ -20,15 +20,16 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',aplicarTema
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Mis Gastos">
+<meta name="apple-mobile-web-app-title" content="Tomin 日課">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
-<title>Mis Gastos</title>
+<title>Tomin 日課</title>
 <style>
 /* ===== Fuentes incluidas en la app (licencia SIL OFL), solo los caracteres que se usan ===== */
 @font-face{font-family:'Dela Gothic One';font-weight:400;font-display:swap;src:url(fonts/DelaGothicOne-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212}
 @font-face{font-family:'Dela Gothic One';font-weight:400;font-display:swap;src:url(fonts/DelaGothicOne-400-kata.woff2) format('woff2');unicode-range:U+30A0-30FF}
+@font-face{font-family:'Dela Gothic One';font-weight:400;font-display:swap;src:url(fonts/DelaGothicOne-400-kanji.woff2) format('woff2');unicode-range:U+65E5,U+8AB2}
 /* ===== Tema claro: pop teal / naranja / morado ===== */
 :root{
  --bg:#FFF3E3;--dot:rgba(20,20,20,.075);--card:#FFFCF6;--tx:#141414;--mut:#655E57;--ln:#141414;--sep:rgba(20,20,20,.12);
@@ -106,7 +107,7 @@ nav button.on b{color:var(--ac3)}
 nav button.add b{background:var(--ac2);color:#fff;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font:400 28px/1 var(--f-display);margin-top:-22px;border:2.5px solid var(--ln);box-shadow:3px 3px 0 var(--shadow)}
 
 /* Formularios: limpios para capturar rápido */
-form label{display:block;font-size:13px;font-weight:800;color:var(--mut);margin:12px 0 5px}
+form label,.card>label{display:block;font-size:13px;font-weight:800;color:var(--mut);margin:12px 0 5px}
 input,select,textarea{width:100%;font:600 16px var(--f-body);padding:11px 12px;border:2px solid var(--ln);border-radius:12px;background:var(--card);color:var(--tx);outline:none}
 input:focus,select:focus{box-shadow:3px 3px 0 var(--ac3)}
 input.monto{font:400 34px/1.1 var(--f-display);text-align:center;padding:14px}
@@ -180,7 +181,7 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <g transform="translate(330 420) rotate(-8)"><rect x="-92" y="-34" width="184" height="64" rx="12" transform="translate(7 7)" style="fill:var(--lg-sh)"/><rect x="-92" y="-34" width="184" height="64" rx="12" stroke-width="8" style="fill:var(--lg-tag);stroke:var(--lg-tagln)"/><text y="14" text-anchor="middle" font-family="Dela Gothic One" font-size="38" style="fill:var(--lg-tagtx)">カケイボ</text></g>
 <path d="M412 70 l14 38 38 14 -38 14 -14 38 -14 -38 -38 -14 38 -14z" stroke-width="7" stroke-linejoin="round" style="fill:var(--lg-star);stroke:var(--lg-starln)"/>
 <path d="M92 92 l8 22 22 8 -22 8 -8 22 -8 -22 -22 -8 22 -8z" stroke-width="6" stroke-linejoin="round" style="fill:var(--lg-star2);stroke:var(--lg-star2ln)"/></g></svg>
-<b id="cortinaNombre">Mis Gastos</b></div>
+<b id="cortinaNombre">Tomin 日課</b></div>
 <header><h1 id="titulo">Inicio</h1><div class="mes" id="mesBox"><button data-act="mes" data-k="-1" aria-label="Mes anterior">‹</button><span id="mesTxt"></span><button data-act="mes" data-k="1" aria-label="Mes siguiente">›</button></div></header>
 <main id="view"></main>
 <nav id="tabs">
@@ -193,7 +194,7 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <div class="toast" id="toast"></div>
 <script>
 'use strict';
-const VERSION='11';
+const VERSION='12';
 const KEY='misgastos_v1';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -219,7 +220,7 @@ function defaults(){return{
 }}
 function load(){try{const r=localStorage.getItem(KEY);if(r)return Object.assign(defaults(),JSON.parse(r))}catch(e){}return defaults()}
 let S=load();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('No se pudo guardar en este dispositivo.')}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('No se pudo guardar en este dispositivo.')}if(typeof syncPendiente==='function')syncPendiente()}
 
 const hoyM=()=>ym(new Date());
 const curMes=()=>{const m=hoyM();return m<S.inicio?S.inicio:m};
@@ -486,9 +487,17 @@ SUB.ajustes=()=>{const i=(n,v,l)=>`<label>${l}</label><input name="${n}" value="
  <div class="card"><h2>Tarjetas</h2>${S.tarjetas.map((t,k)=>`<b>${esc(t.nombre)}</b><div class="grid2">${i('tarjetas.'+k+'.linea',t.linea,'Línea')}${i('tarjetas.'+k+'.corte',t.corte,'Día de corte (estimado)')}</div>${i('tarjetas.'+k+'.pago',t.pago,'Día de pago (estimado)')}`).join('<hr style="border:0;border-top:1px solid var(--ln)">')}</div>
  <button class="btn">Guardar ajustes</button></form>
  <button class="btn sec" data-act="reset" style="color:var(--bad)">Borrar todos los datos</button>`};
-SUB.exportar=()=>back('Exportar')+`<div class="card"><h2>Google Sheets</h2><p class="mut" style="margin:0">Descarga un archivo de Excel con varias pestañas. Súbelo a Google Drive y ábrelo con Google Sheets.</p><button class="btn" data-act="xlsx">Descargar archivo para Sheets</button></div>
+SUB.exportar=()=>{const st=syncEstado(),cl=syncClave(),u=(S.sync&&S.sync.url)||'';
+ return back('Exportar')+`<div class="card"><h2>Google Sheets automático</h2>
+ <p class="mut" style="margin:0">Cada vez que guardes algo (con internet), tus datos se copian solos a tu Google Sheet.</p>
+ <label>Tu clave (pégala en el script)</label><div style="display:flex;gap:8px"><input value="${cl}" readonly style="font-family:ui-monospace,monospace;letter-spacing:1px"><button type="button" class="btn small sec" data-act="copiarClave">Copiar</button></div>
+ <form data-form="sync"><label>Enlace del Apps Script</label><input name="url" value="${esc(u)}" placeholder="https://script.google.com/macros/s/…/exec" inputmode="url" autocomplete="off">
+ <button class="btn">Guardar enlace</button></form>
+ ${u?`<button class="btn sec" data-act="syncAhora">Enviar ahora</button>
+ <p class="mut">${st.ok?'Última vez enviado: '+haceCuanto(st.ok)+'.':'Aún no se ha enviado.'}${st.error&&(st.fallo||0)>(st.ok||0)?` <span class="bad">Último intento falló (${haceCuanto(st.fallo)}).</span>`:''}</p>`:''}</div>
+ <div class="card"><h2>Google Sheets</h2><p class="mut" style="margin:0">Descarga un archivo de Excel con varias pestañas. Súbelo a Google Drive y ábrelo con Google Sheets.</p><button class="btn" data-act="xlsx">Descargar archivo para Sheets</button></div>
  <div class="card"><h2>Respaldo</h2><p class="mut" style="margin:0">Guarda una copia completa para restaurarla en otro dispositivo o si se borra el navegador.</p>
- <button class="btn sec" data-act="backup">Descargar respaldo</button><label>Restaurar desde respaldo</label><input type="file" accept=".json,application/json" data-act="restore"></div>`;
+ <button class="btn sec" data-act="backup">Descargar respaldo</button><label>Restaurar desde respaldo</label><input type="file" accept=".json,application/json" data-act="restore"></div>`};
 
 /* ---------- Render ---------- */
 const TIT={inicio:'Inicio',agregar:'Agregar',tarjetas:'Tarjetas',ahorro:'Ahorro',mas:'Más'};
@@ -510,6 +519,8 @@ document.addEventListener('click',ev=>{const tb=ev.target.closest('[data-tab]');
   case'borrar':if(confirm('¿Borrar este movimiento?')){S.movs=S.movs.filter(m=>m.id!==k);save();render();toast('Borrado')}break;
   case'reset':if(confirm('Esto borra TODOS tus datos de este dispositivo. ¿Continuar?')&&confirm('¿Seguro? No se puede deshacer.')){localStorage.removeItem(KEY);S=defaults();sub=null;tab='inicio';render()}break;
   case'xlsx':exportXlsx();break;
+  case'syncAhora':sincronizar(true);break;
+  case'copiarClave':(navigator.clipboard?navigator.clipboard.writeText(syncClave()):Promise.reject()).then(()=>toast('Clave copiada ✦')).catch(()=>prompt('Copia tu clave:',syncClave()));break;
   case'iconoQuitar':if(S.iconos){delete S.iconos[k];save();render()}break;
   case'mascBorrar':if(confirm('¿Quitar tus imágenes y volver a las poses originales?')){localStorage.removeItem(MKEY);render()}break;
   case'backup':descargar(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`respaldo-gastos-${ymd(new Date())}.json`);break;
@@ -528,6 +539,8 @@ document.addEventListener('change',ev=>{const a=ev.target.dataset.act;
   if(!d.movs)throw 0;if(confirm('Esto reemplaza tus datos actuales con el respaldo. ¿Continuar?')){S=Object.assign(defaults(),d);save();mesVer=curMes();tab='inicio';sub=null;render();toast('Datos cargados ✦')}}).catch(()=>alert('Ese archivo no es un respaldo válido.'))}
 });
 document.addEventListener('submit',ev=>{ev.preventDefault();const fm=ev.target,F=Object.fromEntries(new FormData(fm)),tipo=fm.dataset.form;
+ if(tipo==='sync'){const u=(F.url||'').trim();if(u&&!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u))return alert('El enlace debe verse así:\nhttps://script.google.com/macros/s/…/exec');
+  syncClave();S.sync.url=u;save();render();if(u)sincronizar(true);else toast('Sincronización apagada');return}
  if(tipo==='gasto'){const monto=num(F.monto);if(monto<=0)return alert('Escribe un monto.');
   const m={id:uid(),tipo:'gasto',fecha:F.fecha,monto,cat:F.cat,medio:F.medio,meses:tarjeta(F.medio)?+F.meses:1,nota:F.nota.trim()};
   if(F.para==='otro'){if(!F.quien.trim())return alert('Escribe para quién es.');m.quien=F.quien.trim()}
@@ -551,8 +564,11 @@ function descargar(blob,nombre){const u=URL.createObjectURL(blob),a=document.cre
 const XLSX_URL='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
 function cargarXlsx(){if(window.XLSX)return Promise.resolve();return new Promise((ok,no)=>{const s=document.createElement('script');s.src=XLSX_URL;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
 function exportXlsx(){toast('Preparando archivo…');cargarXlsx().then(generarXlsx).catch(()=>alert('Se necesita internet la primera vez que exportas. Intenta de nuevo con conexión.'))}
-function generarXlsx(){
- const ch=cargosPresupuesto(),wb=XLSX.utils.book_new(),add=(n,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{'(vacío)':''}]),n);
+// Las mismas pestañas sirven para el archivo de Excel y para Google Sheets
+function generarXlsx(){const wb=XLSX.utils.book_new();
+ for(const[n,rows]of Object.entries(hojasDatos()))XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{'(vacío)':''}]),n);
+ XLSX.writeFile(wb,`gastos-${ymd(new Date())}.xlsx`)}
+function hojasDatos(){const H={},ch=cargosPresupuesto(),add=(n,rows)=>{H[n]=rows};
  add('Movimientos',S.movs.slice().sort((a,b)=>(a.fecha||a.primerMes).localeCompare(b.fecha||b.primerMes)).map(m=>({Fecha:m.fecha||m.primerMes,Tipo:{gasto:'Gasto',pago:'Pago de tarjeta',abono:'Me pagaron',deuda:'Deuda previa'}[m.tipo],
   Categoria:m.tipo==='gasto'?catLabel(m.cat):'',Monto:movMonto(m),'Mi parte':m.tipo==='gasto'?propio(m):'',Forma_pago:medioLabel(m.medio||m.tarjeta||''),Meses:m.meses||m.restantes||'',
   'Para otra persona':m.quien||'','Me deben':num(m.compartido)||'',Deudor:m.deudor||m.persona||'',Nota:m.nota||''})));
@@ -562,9 +578,28 @@ function generarXlsx(){
  add('Tarjetas',S.tarjetas.flatMap(t=>{const e=estadoTarjeta(t);return e.meses.map(m=>({Tarjeta:t.nombre,'Mes de pago':m,'Fecha límite':fechaLimite(t,m).f,Cargos:Math.round(e.porMes[m]),Pendiente:Math.round(e.pend[m])}))}));
  add('Préstamos',Object.entries(prestamos()).map(([n,v])=>({Persona:n,'Te debe':Math.round(v)})));
  const s=saldos(ch);add('Ahorro',[{Bolsa:'Ahorro fijo',Saldo:Math.round(s.af),Meta:''},...S.bolsas.map(b=>({Bolsa:b.nombre,Saldo:Math.round(s.b[b.id]),Meta:b.meta})),...S.fondos.map(f=>({Bolsa:'Fondo '+f.nombre,Saldo:Math.round(s.f[f.id]),Meta:f.tope||''}))]);
- XLSX.writeFile(wb,`gastos-${ymd(new Date())}.xlsx`)}
+ return H}
+
+/* ---------- Google Sheets: la app manda tus datos a tu propio Apps Script ---------- */
+const SYNC_KEY='misgastos_sync';
+function syncEstado(){try{return JSON.parse(localStorage.getItem(SYNC_KEY))||{}}catch(e){return{}}}
+function syncGuardarEstado(o){try{localStorage.setItem(SYNC_KEY,JSON.stringify(Object.assign(syncEstado(),o)))}catch(e){}}
+function syncClave(){if(!S.sync)S.sync={url:'',clave:''};if(!S.sync.clave){const a=new Uint8Array(12);crypto.getRandomValues(a);S.sync.clave=[...a].map(b=>b.toString(36).padStart(2,'0')).join('').slice(0,20).toUpperCase();save()}return S.sync.clave}
+function syncPendiente(){clearTimeout(syncPendiente.h);if(S.sync&&S.sync.url)syncPendiente.h=setTimeout(()=>sincronizar(false),4000)}
+function sincronizar(manual){const u=S.sync&&S.sync.url;if(!u){if(manual)alert('Primero pega el enlace de tu Apps Script.');return Promise.resolve()}
+ if(!navigator.onLine){if(manual)toast('Sin internet. Se enviará después.');return Promise.resolve()}
+ // Filas como tabla (encabezado + valores) para que el script solo las pegue
+ const hojas={};for(const[n,rows]of Object.entries(hojasDatos())){const cols=[...new Set(rows.flatMap(r=>Object.keys(r)))];hojas[n]=rows.length?[cols,...rows.map(r=>cols.map(c=>r[c]??''))]:[['(vacío)']]}
+ if(manual)toast('Enviando a Google Sheets…');
+ // text/plain evita el permiso previo (CORS) que Apps Script no maneja
+ return fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({clave:S.sync.clave,app:'Tomin 日課',version:VERSION,hojas})})
+  .then(r=>r.json()).then(j=>{if(!j.ok)throw new Error(j.error||'error');syncGuardarEstado({ok:Date.now(),error:''});if(manual)toast('Google Sheets al día ✦');if(sub==='exportar')render()})
+  .catch(e=>{syncGuardarEstado({error:String(e.message||e),fallo:Date.now()});if(manual)alert(e.message==='clave'?'La clave no coincide con la del script.':'No se pudo enviar. Revisa el enlace y que el script esté publicado para "Cualquier usuario".');if(sub==='exportar')render()})}
+function haceCuanto(t){const m=Math.round((Date.now()-t)/6e4);return m<1?'hace un momento':m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} d`}
 
 render();
+// Al abrir: si hace más de 6 horas que no se envía nada, manda una copia al día
+if(S.sync&&S.sync.url&&Date.now()-(syncEstado().ok||0)>6*36e5)setTimeout(()=>sincronizar(false),3000);
 // Cortina de bienvenida: se ve un instante al abrir y sube (tócala para saltarla)
 (()=>{const c=document.getElementById('cortina');if(!c)return;let ya=false;
  const quitar=()=>{if(ya)return;ya=true;c.classList.add('sube');c.addEventListener('transitionend',()=>c.remove(),{once:true});setTimeout(()=>c.remove(),1000)};
