@@ -1,23 +1,34 @@
-// Guarda la app para que funcione sin internet. Cambia la versión al publicar cambios.
-const CACHE = 'mis-gastos-v3';
-const ARCHIVOS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
+// Guarda la app en el celular para gastar casi nada de datos y funcionar sin internet.
+// Al publicar cambios, sube el número de versión.
+const CACHE = 'mis-gastos-v4';
+const APP = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
-// Primero intenta la red (para recibir actualizaciones); si no hay internet, usa la copia guardada.
+
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    fetch(e.request).then(r => {
-      const copia = r.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copia));
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const propio = new URL(req.url).origin === self.location.origin;
+
+  if (!propio) {
+    // Tipografías y la herramienta de Excel nunca cambian: se descargan una vez y se usan del celular.
+    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
+      if (r.ok || r.type === 'opaque') { const copia = r.clone(); caches.open(CACHE).then(c => c.put(req, copia)); }
       return r;
-    }).catch(() => caches.match(e.request))
-  );
+    })));
+    return;
+  }
+
+  // La app: abre al instante con la copia guardada y revisa en segundo plano si hay versión nueva
+  // (la novedad aparece la siguiente vez que abras la app).
+  e.respondWith(caches.open(CACHE).then(c => c.match(req, { ignoreSearch: true }).then(hit => {
+    const red = fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; }).catch(() => hit);
+    return hit || red;
+  })));
 });
