@@ -22,7 +22,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',aplicarTema
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mis Gastos">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <title>Mis Gastos</title>
 <style>
@@ -152,9 +152,35 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
  .masc{transition:opacity 200ms ease}
  .toast{transform:translate(-50%,0)}
 }
+
+/* ===== Logo (mismo dibujo que el icono) y cortina de bienvenida ===== */
+:root{--lg-bg:#2BB5A8;--lg-dot:rgba(20,20,20,.12);--lg-rayas:#fff;--lg-rayas-op:.14;--lg-coin:#FFF3E3;--lg-ink:#141414;--lg-sh:#141414;
+ --lg-dollar:#FF6A2B;--lg-dln:#141414;--lg-tag:#7B4DFF;--lg-tagln:#141414;--lg-tagtx:#fff;--lg-star:#fff;--lg-starln:#141414;--lg-star2:#FFD23F;--lg-star2ln:#141414}
+:root[data-theme=dark]{--lg-bg:#0B0808;--lg-dot:rgba(196,30,42,.35);--lg-rayas:#C41E2A;--lg-rayas-op:.25;--lg-coin:#141010;--lg-ink:#C41E2A;--lg-sh:#C41E2A;
+ --lg-dollar:#F3E6DA;--lg-dln:#0B0808;--lg-tag:#E2242F;--lg-tagln:#0B0808;--lg-tagtx:#0B0808;--lg-star:#F3E6DA;--lg-starln:#C41E2A;--lg-star2:#E2242F;--lg-star2ln:#0B0808}
+.cortina{position:fixed;inset:0;z-index:50;display:grid;place-items:center;align-content:center;gap:18px;background-color:var(--lg-bg);
+ background-image:radial-gradient(var(--lg-dot) 2px,transparent 2.2px);background-size:18px 18px;border-bottom:4px solid var(--ln);
+ transition:transform 560ms var(--ease-in-out,cubic-bezier(.77,0,.175,1))}
+.cortina svg{width:150px;height:150px;border-radius:34px;box-shadow:6px 6px 0 var(--lg-sh);border:3px solid var(--lg-ink)}
+.cortina b{font:400 26px/1 var(--f-display);color:var(--lg-ink);letter-spacing:.5px}
+:root[data-theme=dark] .cortina b{color:var(--lg-dollar)}
+.cortina.sube{transform:translateY(-102%)}
+@media (prefers-reduced-motion:reduce){.cortina{transition:opacity 200ms ease}.cortina.sube{transform:none;opacity:0}}
 </style>
 </head>
 <body>
+<div class="cortina" id="cortina" aria-hidden="true">
+<svg viewBox="0 0 512 512"><defs><pattern id="lgDot" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="11" cy="11" r="2.4" style="fill:var(--lg-dot)"/></pattern><clipPath id="lgClip"><rect width="512" height="512"/></clipPath></defs>
+<g clip-path="url(#lgClip)"><rect width="512" height="512" style="fill:var(--lg-bg)"/><rect width="512" height="512" fill="url(#lgDot)"/>
+<g style="stroke:var(--lg-rayas);opacity:var(--lg-rayas-op)" stroke-width="10"><line x1="-40" y1="420" x2="420" y2="-40"/><line x1="60" y1="560" x2="560" y2="60"/></g>
+<circle cx="262" cy="270" r="160" style="fill:var(--lg-sh)"/><circle cx="250" cy="256" r="160" stroke-width="14" style="fill:var(--lg-coin);stroke:var(--lg-ink)"/>
+<circle cx="250" cy="256" r="122" fill="none" stroke-width="5" stroke-dasharray="4 14" stroke-linecap="round" style="stroke:var(--lg-ink)"/>
+<text x="262" y="345" text-anchor="middle" font-family="Dela Gothic One" font-size="250" style="fill:var(--lg-sh)">$</text>
+<text x="250" y="333" text-anchor="middle" font-family="Dela Gothic One" font-size="250" stroke-width="10" paint-order="stroke" style="fill:var(--lg-dollar);stroke:var(--lg-dln)">$</text>
+<g transform="translate(330 420) rotate(-8)"><rect x="-92" y="-34" width="184" height="64" rx="12" transform="translate(7 7)" style="fill:var(--lg-sh)"/><rect x="-92" y="-34" width="184" height="64" rx="12" stroke-width="8" style="fill:var(--lg-tag);stroke:var(--lg-tagln)"/><text y="14" text-anchor="middle" font-family="Dela Gothic One" font-size="38" style="fill:var(--lg-tagtx)">カケイボ</text></g>
+<path d="M412 70 l14 38 38 14 -38 14 -14 38 -14 -38 -38 -14 38 -14z" stroke-width="7" stroke-linejoin="round" style="fill:var(--lg-star);stroke:var(--lg-starln)"/>
+<path d="M92 92 l8 22 22 8 -22 8 -8 22 -8 -22 -22 -8 22 -8z" stroke-width="6" stroke-linejoin="round" style="fill:var(--lg-star2);stroke:var(--lg-star2ln)"/></g></svg>
+<b id="cortinaNombre">Mis Gastos</b></div>
 <header><h1 id="titulo">Inicio</h1><div class="mes" id="mesBox"><button data-act="mes" data-k="-1" aria-label="Mes anterior">‹</button><span id="mesTxt"></span><button data-act="mes" data-k="1" aria-label="Mes siguiente">›</button></div></header>
 <main id="view"></main>
 <nav id="tabs">
@@ -167,14 +193,14 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <div class="toast" id="toast"></div>
 <script>
 'use strict';
-const VERSION='10';
+const VERSION='11';
 const KEY='misgastos_v1';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const ym=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}`;
 const addM=(m,k)=>{let[y,mo]=m.split('-').map(Number);mo+=k;y+=Math.floor((mo-1)/12);mo=((mo-1)%12+12)%12+1;return `${y}-${pad(mo)}`};
 const money=n=>(n<-0.5?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('es-MX');
-const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MES=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 const mLabel=m=>{const[y,mo]=m.split('-');return MES[mo-1]+' '+y};
 const fLabel=f=>{const[y,m,d]=f.split('-');return +d+' '+MES[m-1]};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -508,7 +534,7 @@ document.addEventListener('submit',ev=>{ev.preventDefault();const fm=ev.target,F
   if(F.para==='comp'){const c=num(F.compartido);if(c<=0||c>=monto)return alert('Lo que te deben debe ser mayor a 0 y menor al total.');if(!F.deudor.trim())return alert('Escribe quién te debe.');m.compartido=c;m.deudor=F.deudor.trim()}
   if(m.cat==='ahorro:fijo'&&!m.quien){const s=saldos(cargosPresupuesto());const queda=s.af-propio(m);
    if(queda<S.ahorroFijo.minimo&&!confirm(`Con esto tu ahorro fijo quedaría en ${money(queda)}, debajo de tu mínimo de ${money(S.ahorroFijo.minimo)}. ¿Continuar?`))return}
-  S.movs.push(m);save();toast('Gasto guardado');tab='inicio';mesVer=m.fecha.slice(0,7)<S.inicio?S.inicio:m.fecha.slice(0,7)}
+  S.movs.push(m);save();toast('Gasto guardado');tab='inicio';mesVer=m.fecha.slice(0,7)}
  if(tipo==='pago'){const monto=num(F.monto);if(monto<=0)return alert('Escribe un monto.');S.movs.push({id:uid(),tipo:'pago',tarjeta:F.tarjeta,monto,fecha:F.fecha});save();toast('Pago registrado');tab='tarjetas'}
  if(tipo==='abono'){const monto=num(F.monto);if(monto<=0)return alert('Escribe un monto.');S.movs.push({id:uid(),tipo:'abono',persona:F.persona,monto,fecha:F.fecha});save();toast('Registrado')}
  if(tipo==='deuda'){const men=num(F.mensualidad),r=parseInt(F.restantes);if(men<=0||!(r>0))return alert('Revisa la mensualidad y los pagos que faltan.');
@@ -539,6 +565,11 @@ function generarXlsx(){
  XLSX.writeFile(wb,`gastos-${ymd(new Date())}.xlsx`)}
 
 render();
+// Cortina de bienvenida: se ve un instante al abrir y sube (tócala para saltarla)
+(()=>{const c=document.getElementById('cortina');if(!c)return;let ya=false;
+ const quitar=()=>{if(ya)return;ya=true;c.classList.add('sube');c.addEventListener('transitionend',()=>c.remove(),{once:true});setTimeout(()=>c.remove(),1000)};
+ c.addEventListener('click',quitar);
+ Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,800))]).then(()=>setTimeout(quitar,650))})();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
  // Si llega una versión nueva mientras la app está abierta, recarga una vez para mostrarla de inmediato
  const habia=!!navigator.serviceWorker.controller;let recargada=false;
