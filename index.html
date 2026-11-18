@@ -83,7 +83,11 @@ main{padding:0 16px 16px;max-width:640px;margin:0 auto}
 
 /* Sticker de categoría */
 .stk{display:inline-grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:var(--sticker);border:2px solid var(--ln);font-size:16px;line-height:1;transform:rotate(-7deg);box-shadow:2px 2px 0 var(--shadow)}
+.stk.img{overflow:hidden;width:40px;height:40px;transform:rotate(-5deg)}
+.stk.img img{width:100%;height:100%;object-fit:cover;display:block}
 .lbl{display:flex;align-items:center;gap:10px;min-width:0}
+.fijoRow{display:flex;align-items:flex-end;gap:10px}.fijoRow .stk{margin-bottom:6px}
+.fijoRow .btn.small{flex:none;margin-bottom:4px}
 
 /* Navegación */
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:2.5px solid var(--ln);padding-bottom:env(safe-area-inset-bottom);z-index:6}
@@ -108,7 +112,11 @@ input.monto{font:400 34px/1.1 var(--f-display);text-align:center;padding:14px}
 .btn.small{display:inline-block;width:auto;padding:7px 12px;margin:0;font-size:13px;box-shadow:2px 2px 0 var(--shadow)}
 .del{border:0;background:none;color:var(--bad);font:800 13px var(--f-body);padding:4px}
 .hidden{display:none!important}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.grid2>*{min-width:0}
+/* iPhone: los campos de fecha traen un ancho mínimo propio y se salían de la tarjeta */
+input[type=date],input[type=month]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;display:block;min-height:50px;text-align:left}
+input::-webkit-date-and-time-value{text-align:left;margin:0}
 .menu{border:2.5px solid var(--ln);border-radius:18px;overflow:hidden;margin:12px 0;box-shadow:4px 4px 0 var(--shadow)}
 .menu button{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:var(--card);color:var(--tx);font:700 15px var(--f-body);padding:15px;border-bottom:1.5px dashed var(--sep);text-align:left}
 .menu button:last-child{border-bottom:0}
@@ -266,7 +274,12 @@ function bar(v,max,inv,fijo){const p=max>0?v/max:(v>0?2:0);
 const ICON={'fijo:renta':'🏠','fijo:servicios':'💡','fijo:urbani':'🚌','fijo:gasolina':'⛽','fijo:corte':'✂️','fijo:gym':'🏋️','fijo:claude':'✦','fijo:recarga':'📱',
  'gustos:salidas':'🍜','gustos:online':'📦','gustos:ropa':'👕','gustos:otro':'🎮','fondo:salud':'💊','fondo:cuidado':'🧴','fondo:cumple':'🎂',
  'ahorro:fijo':'🐷','ahorro:carro':'🚗','ahorro:emergencias':'🛟',otro:'⚡',deuda:'💳',pago:'💳',abono:'🤝'};
-const stk=c=>`<span class="stk" aria-hidden="true">${ICON[c]||'✦'}</span>`;
+// Los gastos fijos pueden llevar una imagen propia (se guarda en tus datos, no en el código público)
+const stk=c=>{const im=c.startsWith('fijo:')&&S.iconos&&S.iconos[c.slice(5)];
+ return im?`<span class="stk img" aria-hidden="true"><img src="${im}" alt=""></span>`:`<span class="stk" aria-hidden="true">${ICON[c]||'✦'}</span>`};
+// Recorta al centro en cuadrado y la reduce a 144px para que pese ~5 KB
+function iconoImg(file){return new Promise((ok,no)=>{const im=new Image();im.onload=()=>{const s=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=144;
+ c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)*.2,s,s,0,0,144,144);URL.revokeObjectURL(im.src);ok(c.toDataURL('image/jpeg',.82))};im.onerror=no;im.src=URL.createObjectURL(file)})}
 /* Mascota: poses que sube el usuario (se guardan aparte para no inflar los respaldos) */
 const MKEY='misgastos_mascota';
 function mascota(){try{return JSON.parse(localStorage.getItem(MKEY))||{}}catch(e){return{}}}
@@ -427,7 +440,8 @@ SUB.cumples=()=>back('Cumpleaños')+`<form data-form="cumples"><div class="card"
 SUB.ajustes=()=>{const i=(n,v,l)=>`<label>${l}</label><input name="${n}" value="${v}" inputmode="decimal">`;
  return back('Ajustes')+`<form data-form="ajustes">
  <div class="card"><h2>General</h2><label>Nombre para el saludo</label><input name="nombre" value="${esc(S.nombre||'')}" inputmode="text">${i('ingreso',S.ingreso,'Sueldo mensual')}${i('gustosTope',S.gustosTope,'Tope de gustos')}<label>Mes de inicio</label><input type="month" name="inicio" value="${S.inicio}"></div>
- <div class="card"><h2>Gastos fijos</h2>${S.fijos.map((f,k)=>i('fijos.'+k+'.monto',f.monto,esc(f.nombre))).join('')}</div>
+ <div class="card"><h2>Gastos fijos</h2><p class="mut" style="margin:0">Toca «Icono» para ponerle tu propia imagen.</p>${S.fijos.map((f,k)=>`<div class="fijoRow">${stk('fijo:'+f.id)}<div style="flex:1;min-width:0">${i('fijos.'+k+'.monto',f.monto,esc(f.nombre))}</div>
+  <label class="btn small sec">Icono<input type="file" accept="image/*" data-act="icono" data-k="${f.id}" hidden></label>${S.iconos&&S.iconos[f.id]?`<button type="button" class="del" data-act="iconoQuitar" data-k="${f.id}" aria-label="Quitar icono">✕</button>`:''}</div>`).join('')}</div>
  <div class="card"><h2>Fondos</h2>${S.fondos.map((f,k)=>i('fondos.'+k+'.mensual',f.mensual,esc(f.nombre)+' (mensual)')).join('')}${i('fondos.0.tope',S.fondos[0].tope,'Tope fondo de salud')}</div>
  <div class="card"><h2>Ahorro</h2>${i('ahorroFijo.mensual',S.ahorroFijo.mensual,'Ahorro fijo mensual')}${i('ahorroFijo.minimo',S.ahorroFijo.minimo,'Mínimo del ahorro fijo')}
   ${S.bolsas.map((b,k)=>i('bolsas.'+k+'.pct',b.pct,esc(b.nombre)+' (% del sobrante)')+i('bolsas.'+k+'.meta',b.meta,esc(b.nombre)+' (meta)')).join('')}</div>
@@ -459,6 +473,7 @@ document.addEventListener('click',ev=>{const tb=ev.target.closest('[data-tab]');
   case'borrar':if(confirm('¿Borrar este movimiento?')){S.movs=S.movs.filter(m=>m.id!==k);save();render();toast('Borrado')}break;
   case'reset':if(confirm('Esto borra TODOS tus datos de este dispositivo. ¿Continuar?')&&confirm('¿Seguro? No se puede deshacer.')){localStorage.removeItem(KEY);S=defaults();sub=null;tab='inicio';render()}break;
   case'xlsx':exportXlsx();break;
+  case'iconoQuitar':if(S.iconos){delete S.iconos[k];save();render()}break;
   case'mascBorrar':if(confirm('¿Quitar tus imágenes y volver a las poses originales?')){localStorage.removeItem(MKEY);render()}break;
   case'backup':descargar(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`respaldo-gastos-${ymd(new Date())}.json`);break;
  }});
@@ -466,9 +481,14 @@ document.addEventListener('change',ev=>{const a=ev.target.dataset.act;
  if(a==='medio'){document.getElementById('mesesBox').classList.toggle('hidden',!tarjeta(ev.target.value))}
  if(a==='para'){const v=ev.target.value;document.getElementById('compBox').classList.toggle('hidden',v!=='comp');document.getElementById('otroBox').classList.toggle('hidden',v!=='otro')}
  if(a==='pagoT')sugPago();
+ if(a==='icono'){const f=ev.target.files[0],id=ev.target.dataset.k;if(!f)return;iconoImg(f).then(d=>{S.iconos=S.iconos||{};S.iconos[id]=d;
+  try{save();toast('Icono guardado ✦')}catch(e){delete S.iconos[id];alert('No hay espacio para esa imagen.')}render()}).catch(()=>alert('No se pudo leer la imagen.'))}
  if(a==='masc'){const f=ev.target.files[0];if(!f)return;resizeImg(f).then(d=>{const M=mascota();M[ev.target.dataset.k]=d;
   try{localStorage.setItem(MKEY,JSON.stringify(M));toast('Mascota guardada ✦')}catch(e){alert('La imagen es muy pesada. Prueba con una más pequeña.')}render()}).catch(()=>alert('No se pudo leer la imagen.'))}
- if(a==='restore'){const f=ev.target.files[0];if(!f)return;f.text().then(t=>{const d=JSON.parse(t);if(!d.movs)throw 0;if(confirm('Esto reemplaza tus datos actuales con el respaldo. ¿Continuar?')){S=Object.assign(defaults(),d);save();mesVer=curMes();tab='inicio';sub=null;render();toast('Datos cargados ✦')}}).catch(()=>alert('Ese archivo no es un respaldo válido.'))}
+ if(a==='restore'){const f=ev.target.files[0];if(!f)return;f.text().then(t=>{const d=JSON.parse(t);
+  // Archivo solo de iconos: se agregan sin tocar tus movimientos
+  if(d.iconos&&!d.movs){S.iconos=Object.assign(S.iconos||{},d.iconos);save();render();toast('Iconos cargados ✦');return}
+  if(!d.movs)throw 0;if(confirm('Esto reemplaza tus datos actuales con el respaldo. ¿Continuar?')){S=Object.assign(defaults(),d);save();mesVer=curMes();tab='inicio';sub=null;render();toast('Datos cargados ✦')}}).catch(()=>alert('Ese archivo no es un respaldo válido.'))}
 });
 document.addEventListener('submit',ev=>{ev.preventDefault();const fm=ev.target,F=Object.fromEntries(new FormData(fm)),tipo=fm.dataset.form;
  if(tipo==='gasto'){const monto=num(F.monto);if(monto<=0)return alert('Escribe un monto.');

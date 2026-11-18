@@ -1,6 +1,6 @@
 // Guarda la app en el celular para gastar casi nada de datos y funcionar sin internet.
 // Al publicar cambios, sube el número de versión.
-const CACHE = 'mis-gastos-v5';
+const CACHE = 'mis-gastos-v6';
 const APP = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
   './fonts/DelaGothicOne-400-latin.woff2', './fonts/DelaGothicOne-400-kata.woff2',
   './fonts/MPLUSRounded1c-500-latin.woff2', './fonts/MPLUSRounded1c-700-latin.woff2', './fonts/MPLUSRounded1c-800-latin.woff2'];
