@@ -68,6 +68,7 @@ main{padding:0 16px 16px;max-width:640px;margin:0 auto}
 .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
 :root[data-theme=light] .big.ok{color:#178F84}
 .pill{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;border:1.5px solid var(--ln);background:var(--card);color:var(--tx)}
+.pill.emo{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:14px;letter-spacing:0;padding:1px 7px}
 
 /* Barras: scaleX en vez de width (no provoca re-layout) */
 .bar{height:14px;background:var(--track);border:2px solid var(--ln);border-radius:9px;overflow:hidden;margin-top:6px}
@@ -353,7 +354,7 @@ V.inicio=()=>{const ch=cargosPresupuesto(),r=resumen(mesVer,ch);
  const tj=S.tarjetas.map(t=>{const e=estadoTarjeta(t);if(!e.prox)return'';const fl=fechaLimite(t,e.prox),d=dias(fl.f);
    return `<div class="row"><span>${esc(t.nombre)}<br><span class="mut">${fl.ok?'Límite':'Límite aprox.'} ${fLabel(fl.f)} · ${diasTxt(d)}</span></span><b class="${d<=3?'bad':''}">${money(e.pend[e.prox])}</b></div>`}).join('');
  if(tj)h+=`<div class="card"><h2>Próximos pagos de tarjeta</h2>${tj}</div>`;
- const cu=proxCumples(30);if(cu.length)h+=`<div class="card"><h2>Cumpleaños próximos</h2>${cu.map(c=>`<div class="row"><span>${esc(c.nombre||'Cumpleaños')} <span class="pill">${c.primordial?'primordial':'secundario'}</span><br><span class="mut">${fLabel('2000-'+c.fecha)} · ${diasTxt(c.dias)}</span></span><span>${money(c.monto)}</span></div>`).join('')}</div>`;
+ const cu=proxCumples(30);if(cu.length)h+=`<div class="card"><h2>Cumpleaños próximos</h2>${cu.map(c=>`<div class="row"><span>${esc(c.nombre||'Cumpleaños')} <span class="pill emo" aria-label="${c.primordial?'primordial':'secundario'}">${c.primordial?'🗣️‼️🚨':'🗿‼️'}</span><br><span class="mut">${fLabel('2000-'+c.fecha)} · ${diasTxt(c.dias)}</span></span><span>${money(c.monto)}</span></div>`).join('')}</div>`;
  const pr=Object.entries(prestamos()).filter(([,v])=>v>0.5);
  if(pr.length)h+=`<div class="card"><h2>Te deben <b>${money(pr.reduce((a,[,v])=>a+v,0))}</b></h2>${pr.map(([n,v])=>`<div class="row"><span>${esc(n)}</span><span>${money(v)}</span></div>`).join('')}</div>`;
  if(!S.movs.length)h+=`<div class="card"><h2>Primeros pasos</h2><p class="mut" style="margin:0">1. En <b>Agregar → Deuda previa</b> captura lo que ya debes en cada tarjeta (con tus estados de cuenta).<br>2. Si ya tienes dinero ahorrado, ponlo en <b>Más → Ajustes → Saldos iniciales</b>.<br>3. Registra cada gasto en <b>+</b>.</p></div>`;
@@ -441,7 +442,7 @@ SUB.prestamos=()=>{const p=prestamos();const ks=Object.keys(p);
   return `<div class="card"><h2>${esc(n)} <span class="${p[n]>0.5?'warn':'ok'}">${p[n]>0.5?'debe '+money(p[n]):'al corriente'}</span></h2>${hist.map(m=>`<div class="row"><span>${movDesc(m)}</span><span>${m.tipo==='abono'?'−':''}${money(m.tipo==='gasto'&&!m.quien?m.compartido:movMonto(m))}</span></div>`).join('')}</div>`}).join(''):'<div class="card"><p class="mut">Aquí aparecerán las compras que hagas para otras personas y los gastos compartidos.</p></div>')};
 SUB.cumples=()=>back('Cumpleaños')+`<form data-form="cumples"><div class="card">${S.cumples.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(c=>`<div class="row" style="display:block">
   <div style="display:flex;gap:6px;align-items:center"><b style="min-width:52px">${fLabel('2000-'+c.fecha)}</b><input name="n_${c.id}" value="${esc(c.nombre)}" placeholder="Nombre"><input name="m_${c.id}" value="${c.monto}" inputmode="decimal" style="width:80px"></div>
-  <span class="pill">${c.primordial?'primordial':'secundario'}</span></div>`).join('')}
+  <span class="pill emo" aria-label="${c.primordial?'primordial':'secundario'}">${c.primordial?'🗣️‼️🚨':'🗿‼️'}</span></div>`).join('')}
   <p class="mut">Total al año: ${money(S.cumples.reduce((a,c)=>a+num(c.monto),0))} · el fondo junta ${money((S.fondos.find(f=>f.id==='cumple')||{}).mensual*12)} al año.</p>
   <button class="btn">Guardar</button></div></form>`;
 SUB.ajustes=()=>{const i=(n,v,l)=>`<label>${l}</label><input name="${n}" value="${v}" inputmode="decimal">`;
