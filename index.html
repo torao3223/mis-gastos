@@ -167,6 +167,7 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <div class="toast" id="toast"></div>
 <script>
 'use strict';
+const VERSION='10';
 const KEY='misgastos_v1';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -427,7 +428,8 @@ V.ahorro=()=>{const s=saldos(cargosPresupuesto());const af=s.af,min=S.ahorroFijo
 
 V.mas=()=>{if(sub)return SUB[sub]();
  return `<div class="menu">${[['movs','Movimientos del mes'],['prestamos','Préstamos y compartidos'],['cumples','Cumpleaños'],['ajustes','Ajustes y montos'],['exportar','Exportar a Sheets / respaldo']].map(([k,v])=>`<button data-act="sub" data-k="${k}"><span>${v}</span><span class="mut">›</span></button>`).join('')}</div>
-  <p class="mut">Los datos se guardan solo en este dispositivo. Exporta un respaldo de vez en cuando.</p>`};
+  <p class="mut">Los datos se guardan solo en este dispositivo. Exporta un respaldo de vez en cuando.</p>
+  <p class="mut" style="text-align:center">Versión ${VERSION}</p>`};
 const back=t=>`<button class="btn sec small" data-act="sub" data-k="">‹ Volver</button> <b style="margin-left:6px">${t}</b>`;
 const movDesc=m=>m.tipo==='gasto'?`${esc(m.nota||catLabel(m.cat))}<br><span class="mut">${fLabel(m.fecha)} · ${catLabel(m.cat)} · ${medioLabel(m.medio)}${m.meses>1?` · ${m.meses} MSI`:''}${m.quien?` · de ${esc(m.quien)}`:''}${num(m.compartido)>0?` · me deben ${money(m.compartido)}`:''}</span>`
  :m.tipo==='pago'?`Pago a ${medioLabel(m.tarjeta)}<br><span class="mut">${fLabel(m.fecha)} · no es gasto</span>`
@@ -537,7 +539,12 @@ function generarXlsx(){
  XLSX.writeFile(wb,`gastos-${ymd(new Date())}.xlsx`)}
 
 render();
-if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
+ // Si llega una versión nueva mientras la app está abierta, recarga una vez para mostrarla de inmediato
+ const habia=!!navigator.serviceWorker.controller;let recargada=false;
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(habia&&!recargada){recargada=true;location.reload()}});
+ navigator.serviceWorker.register('sw.js').then(r=>{r.update();document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update()})}).catch(()=>{});
+}
 </script>
 </body>
 </html>

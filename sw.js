@@ -1,12 +1,13 @@
 // Guarda la app en el celular para gastar casi nada de datos y funcionar sin internet.
 // Al publicar cambios, sube el número de versión.
-const CACHE = 'mis-gastos-v9';
+const CACHE = 'mis-gastos-v10';
 const APP = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
   './fonts/DelaGothicOne-400-latin.woff2', './fonts/DelaGothicOne-400-kata.woff2'
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
+  // cache:'reload' = descarga directo del servidor, no la copia vieja que el navegador tenga guardada
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
@@ -30,7 +31,7 @@ self.addEventListener('fetch', e => {
   // La app: abre al instante con la copia guardada y revisa en segundo plano si hay versión nueva
   // (la novedad aparece la siguiente vez que abras la app).
   e.respondWith(caches.open(CACHE).then(c => c.match(req, { ignoreSearch: true }).then(hit => {
-    const red = fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; }).catch(() => hit);
+    const red = fetch(req, { cache: 'no-cache' }).then(r => { if (r.ok) c.put(req, r.clone()); return r; }).catch(() => hit);
     return hit || red;
   })));
 });
