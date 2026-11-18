@@ -194,7 +194,7 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <div class="toast" id="toast"></div>
 <script>
 'use strict';
-const VERSION='14';
+const VERSION='15';
 const KEY='misgastos_v1';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -264,13 +264,20 @@ function saldos(ch){const hasta=curMes(),hm=hoyM();
  const f={};S.fondos.forEach(x=>f[x.id]=num(x.inicial));
  let af=num(S.ahorroFijo.inicial);const b={};S.bolsas.forEach(x=>b[x.id]=num(x.inicial));
  const dist=v=>S.bolsas.forEach(x=>b[x.id]+=v*num(x.pct)/100);
- for(let mes=S.inicio;mes<=hasta;mes=addM(mes,1)){const r=resumen(mes,ch);let extra=0;
-  S.fondos.forEach(x=>{f[x.id]+=num(x.mensual)-(r.g['fondo:'+x.id]||0);if(num(x.tope)>0&&f[x.id]>x.tope){extra+=f[x.id]-x.tope;f[x.id]=num(x.tope)}});
-  af+=r.af-(r.g['ahorro:fijo']||0);
+ // El ahorro de un mes se suma hasta que cobras: a partir del día COBRO de ese mes. Lo que sacas del ahorro sí se resta siempre.
+ const cobrado=mes=>mes<hm||(mes===hm&&new Date().getDate()>=COBRO);
+ for(let mes=S.inicio;mes<=hasta;mes=addM(mes,1)){const r=resumen(mes,ch),ok=cobrado(mes);let extra=0;
+  S.fondos.forEach(x=>{f[x.id]+=(ok?num(x.mensual):0)-(r.g['fondo:'+x.id]||0);if(num(x.tope)>0&&f[x.id]>x.tope){extra+=f[x.id]-x.tope;f[x.id]=num(x.tope)}});
+  af+=(ok?r.af:0)-(r.g['ahorro:fijo']||0);
   S.bolsas.forEach(x=>b[x.id]-=(r.g['ahorro:'+x.id]||0));
-  dist(r.resto+extra);
+  dist((ok?r.resto:0)+extra);
   if(mes<hm)dist(r.libre-r.resto);
- }return{f,af,b}}
+ }
+ // Lo que se sumará en el próximo cobro (para mostrarlo como "planeado")
+ const pm=hm<S.inicio?S.inicio:cobrado(hm)?addM(hm,1):hm,rp=resumen(pm,ch);
+ const plan={mes:pm,af:rp.af,b:Object.fromEntries(S.bolsas.map(x=>[x.id,rp.resto*num(x.pct)/100])),f:Object.fromEntries(S.fondos.map(x=>[x.id,num(x.mensual)]))};
+ return{f,af,b,plan}}
+const COBRO=28;
 
 /* ---------- Tarjetas ---------- */
 function corteDia(t,mes){const c=S.confirmados[t.id+'|'+mes];return c&&c.corte?+c.corte:+t.corte}
@@ -444,13 +451,13 @@ V.tarjetas=()=>S.tarjetas.map(t=>{const e=estadoTarjeta(t);let h=`<div class="ca
    ${Object.entries(S.confirmados).filter(([k])=>k.startsWith(t.id+'|')).map(([k,v])=>`<div class="row"><span class="mut">Corte ${mLabel(k.split('|')[1])}: día ${v.corte} · pago ${fLabel(v.pago)}</span></div>`).join('')}</details>`;
  return h+'</div>'}).join('');
 
-V.ahorro=()=>{const s=saldos(cargosPresupuesto());const af=s.af,min=S.ahorroFijo.minimo;
- let h=`<div class="card"><h2>Ahorro fijo <span class="mut">${money(S.ahorroFijo.mensual)}/mes</span></h2><div class="big">${money(af)}</div>
+V.ahorro=()=>{const s=saldos(cargosPresupuesto());const af=s.af,min=S.ahorroFijo.minimo,cuando=fLabel(s.plan.mes+'-'+COBRO),pl=v=>v>0.5?`<p class="mut" style="margin:2px 0 0">+${money(v)} planeado al cobrar (${cuando})</p>`:'';
+ let h=`<div class="card"><h2>Ahorro fijo <span class="mut">${money(S.ahorroFijo.mensual)}/mes</span></h2><div class="big">${money(af)}</div>${pl(s.plan.af)}
   <p class="mut" style="margin:4px 0 0">Mínimo que siempre debe quedar: ${money(min)}. ${af<min?'<span class="warn">Todavía estás por debajo del mínimo.</span>':`Puedes usar hasta ${money(af-min)} sin bajar del mínimo.`}</p></div>`;
- h+=S.bolsas.map(b=>{const v=s.b[b.id];return `<div class="card"><h2>${esc(b.nombre)} <span class="mut">${b.pct}% · meta ${money(b.meta)}</span></h2><div class="big">${money(v)}</div>${bar(Math.max(0,v),num(b.meta),true)}
+ h+=S.bolsas.map(b=>{const v=s.b[b.id];return `<div class="card"><h2>${esc(b.nombre)} <span class="mut">${b.pct}% · meta ${money(b.meta)}</span></h2><div class="big">${money(v)}</div>${pl(s.plan.b[b.id])}${bar(Math.max(0,v),num(b.meta),true)}
   <p class="mut" style="margin:6px 0 0">${v>=b.meta?'¡Meta alcanzada! 🎉':`Faltan ${money(b.meta-v)} (${Math.round(Math.max(0,v)/b.meta*100)}%)`}</p></div>`}).join('');
- h+=`<div class="card"><h2>Fondos que se acumulan</h2>${S.fondos.map(f=>`<div class="row"><span>${esc(f.nombre)}<br><span class="mut">${money(f.mensual)}/mes${num(f.tope)>0?` · tope ${money(f.tope)} (lo que pase se va al ahorro)`:''}</span></span><b class="${s.f[f.id]<0?'bad':''}">${money(s.f[f.id])}</b></div>${s.f[f.id]<0?`<div class="aviso">Gastaste más de lo que tenía el fondo. Puedes ponerle un saldo inicial en Ajustes.</div>`:''}`).join('')}</div>
-  <p class="mut">El ahorro del mes se acredita al inicio según el plan; al cierre del mes se suma (o resta) lo que te sobró o te pasaste.</p>`;
+ h+=`<div class="card"><h2>Fondos que se acumulan</h2>${S.fondos.map(f=>`<div class="row"><span>${esc(f.nombre)}<br><span class="mut">${money(f.mensual)}/mes${num(f.tope)>0?` · tope ${money(f.tope)} (lo que pase se va al ahorro)`:''}</span></span><span style="text-align:right"><b class="${s.f[f.id]<0?'bad':''}">${money(s.f[f.id])}</b><br><span class="mut">+${money(s.plan.f[f.id])} al cobrar</span></span></div>${s.f[f.id]<0?`<div class="aviso">Gastaste más de lo que tenía el fondo. Puedes ponerle un saldo inicial en Ajustes.</div>`:''}`).join('')}</div>
+  <p class="mut">El ahorro de cada mes se suma cuando cobras (a partir del día ${COBRO}). Al cierre del mes se suma (o resta) lo que te sobró o te pasaste.</p>`;
  return h};
 
 V.mas=()=>{if(sub)return SUB[sub]();
