@@ -194,7 +194,7 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <div class="toast" id="toast"></div>
 <script>
 'use strict';
-const VERSION='12';
+const VERSION='13';
 const KEY='misgastos_v1';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -588,6 +588,8 @@ function syncClave(){if(!S.sync)S.sync={url:'',clave:''};if(!S.sync.clave){const
 function syncPendiente(){clearTimeout(syncPendiente.h);if(S.sync&&S.sync.url)syncPendiente.h=setTimeout(()=>sincronizar(false),4000)}
 function sincronizar(manual){const u=S.sync&&S.sync.url;if(!u){if(manual)alert('Primero pega el enlace de tu Apps Script.');return Promise.resolve()}
  if(!navigator.onLine){if(manual)toast('Sin internet. Se enviará después.');return Promise.resolve()}
+ // Protección: un dispositivo sin datos (sueldo en 0) no debe borrar tu Sheet
+ if(!(S.ingreso>0)){if(manual)alert('Esta app todavía no tiene tus datos (sueldo en 0), así que no se envía nada para no borrar tu Google Sheet. Carga primero tu configuración o respaldo.');return Promise.resolve()}
  // Filas como tabla (encabezado + valores) para que el script solo las pegue
  const hojas={};for(const[n,rows]of Object.entries(hojasDatos())){const cols=[...new Set(rows.flatMap(r=>Object.keys(r)))];hojas[n]=rows.length?[cols,...rows.map(r=>cols.map(c=>r[c]??''))]:[['(vacío)']]}
  if(manual)toast('Enviando a Google Sheets…');
