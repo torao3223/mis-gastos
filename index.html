@@ -3,8 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#FFF3E3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0B0808" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFF3E3">
+<script>
+/* Tema: 'hora' (claro de 7 am a 7 pm), 'iphone' (como el sistema), 'claro' u 'oscuro'. Va aquí para que no parpadee al abrir. */
+function temaActual(){let t;try{t=(typeof S!=='undefined'&&S.tema)||(JSON.parse(localStorage.getItem('misgastos_v1'))||{}).tema}catch(e){}t=t||'hora';
+ if(t==='claro')return'light';if(t==='oscuro')return'dark';
+ if(t==='iphone')return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+ const h=new Date().getHours();return h>=7&&h<19?'light':'dark'}
+function aplicarTema(){const d=temaActual(),r=document.documentElement;if(r.dataset.theme===d)return;r.dataset.theme=d;
+ const m=document.querySelector('meta[name=theme-color]');if(m)m.content=d==='dark'?'#0B0808':'#FFF3E3'}
+aplicarTema();setInterval(aplicarTema,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)aplicarTema()});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',aplicarTema);
+</script>
 <link rel="preload" href="fonts/DelaGothicOne-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -28,10 +39,10 @@
  --f-body:'Dela Gothic One',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
 }
 /* ===== Tema oscuro: tinta manga roja y negra ===== */
-@media (prefers-color-scheme:dark){:root{
+:root[data-theme=dark]{color-scheme:dark;
  --bg:#0B0808;--dot:rgba(196,30,42,.22);--card:#141010;--tx:#F3E6DA;--mut:#B79C95;--ln:#C41E2A;--sep:rgba(196,30,42,.28);
  --ac:#E2242F;--ac2:#E2242F;--ac3:#E2242F;--onac:#0B0808;--ok:#F3E6DA;--warn:#FF8A80;--bad:#FF2D3A;--track:#261818;
- --shadow:#C41E2A;--sticker:#0B0808;--hero:#B3141E;--hero-tx:#0B0808;}}
+ --shadow:#C41E2A;--sticker:#0B0808;--hero:#B3141E;--hero-tx:#0B0808;}
 *{box-sizing:border-box}
 html{background:var(--bg);font-synthesis:none;-webkit-font-smoothing:antialiased}
 body{margin:0;font:14px/1.5 var(--f-body);font-weight:400;letter-spacing:.2px;color:var(--tx);background-color:var(--bg);
@@ -55,7 +66,7 @@ main{padding:0 16px 16px;max-width:640px;margin:0 auto}
 .row+.row{border-top:1.5px dashed var(--sep)}
 .row>span:last-child,.row>b:last-child{white-space:nowrap;text-align:right}
 .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
-@media (prefers-color-scheme:light){.big.ok{color:#178F84}}
+:root[data-theme=light] .big.ok{color:#178F84}
 .pill{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;border:1.5px solid var(--ln);background:var(--card);color:var(--tx)}
 
 /* Barras: scaleX en vez de width (no provoca re-layout) */
@@ -117,7 +128,7 @@ input::-webkit-date-and-time-value{text-align:left;margin:0}
 .menu button{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:var(--card);color:var(--tx);font:700 15px var(--f-body);padding:15px;border-bottom:1.5px dashed var(--sep);text-align:left}
 .menu button:last-child{border-bottom:0}
 details summary{cursor:pointer;color:var(--ac3);font-weight:800;font-size:13px;margin-top:8px}
-@media (prefers-color-scheme:dark){details summary{color:var(--tx)}}
+:root[data-theme=dark] details summary{color:var(--tx)}
 .aviso{background:color-mix(in srgb,var(--warn) 16%,var(--card));border:2px dashed var(--warn);border-radius:12px;padding:8px 10px;font-size:13px;font-weight:600;margin-top:10px}
 
 /* Presión: respuesta inmediata en todo lo que se toca (Emil: scale .97, 160ms ease-out) */
@@ -435,7 +446,8 @@ SUB.cumples=()=>back('Cumpleaños')+`<form data-form="cumples"><div class="card"
   <button class="btn">Guardar</button></div></form>`;
 SUB.ajustes=()=>{const i=(n,v,l)=>`<label>${l}</label><input name="${n}" value="${v}" inputmode="decimal">`;
  return back('Ajustes')+`<form data-form="ajustes">
- <div class="card"><h2>General</h2><label>Nombre para el saludo</label><input name="nombre" value="${esc(S.nombre||'')}" inputmode="text">${i('ingreso',S.ingreso,'Sueldo mensual')}${i('gustosTope',S.gustosTope,'Tope de gustos')}<label>Mes de inicio</label><input type="month" name="inicio" value="${S.inicio}"></div>
+ <div class="card"><h2>General</h2><label>Nombre para el saludo</label><input name="nombre" value="${esc(S.nombre||'')}" inputmode="text">${i('ingreso',S.ingreso,'Sueldo mensual')}${i('gustosTope',S.gustosTope,'Tope de gustos')}<label>Mes de inicio</label><input type="month" name="inicio" value="${S.inicio}">
+  <label>Tema</label><select name="tema">${[['hora','Según la hora (claro 7 am – 7 pm)'],['iphone','Como el iPhone'],['claro','Siempre claro'],['oscuro','Siempre oscuro']].map(([v,l])=>`<option value="${v}"${(S.tema||'hora')===v?' selected':''}>${l}</option>`).join('')}</select></div>
  <div class="card"><h2>Gastos fijos</h2><p class="mut" style="margin:0">Toca «Icono» para ponerle tu propia imagen.</p>${S.fijos.map((f,k)=>`<div class="fijoRow">${stk('fijo:'+f.id)}<div style="flex:1;min-width:0">${i('fijos.'+k+'.monto',f.monto,esc(f.nombre))}</div>
   <label class="btn small sec">Icono<input type="file" accept="image/*" data-act="icono" data-k="${f.id}" hidden></label>${S.iconos&&S.iconos[f.id]?`<button type="button" class="del" data-act="iconoQuitar" data-k="${f.id}" aria-label="Quitar icono">✕</button>`:''}</div>`).join('')}</div>
  <div class="card"><h2>Fondos</h2>${S.fondos.map((f,k)=>i('fondos.'+k+'.mensual',f.mensual,esc(f.nombre)+' (mensual)')).join('')}${i('fondos.0.tope',S.fondos[0].tope,'Tope fondo de salud')}</div>
@@ -500,7 +512,7 @@ document.addEventListener('submit',ev=>{ev.preventDefault();const fm=ev.target,F
   S.movs.push({id:uid(),tipo:'deuda',tarjeta:F.tarjeta,mensualidad:men,restantes:r,primerMes:F.primerMes,nota:F.nota.trim(),quien:F.quien.trim()||undefined});save();toast('Deuda guardada')}
  if(tipo==='confirmar'){const d=parseInt(F.corte);if(!(d>=1&&d<=31))return alert('Día de corte inválido.');S.confirmados[fm.dataset.t+'|'+F.mes]={corte:d,pago:F.pago};save();toast('Fechas guardadas')}
  if(tipo==='cumples'){S.cumples.forEach(c=>{c.nombre=(F['n_'+c.id]||'').trim();c.monto=num(F['m_'+c.id])});save();toast('Guardado')}
- if(tipo==='ajustes'){for(const[k,v]of Object.entries(F)){if(k==='inicio'){if(v)S.inicio=v;continue}if(k==='nombre'){S.nombre=v.trim();continue}const p=k.split('.');let o=S;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=num(v)}
+ if(tipo==='ajustes'){for(const[k,v]of Object.entries(F)){if(k==='inicio'){if(v)S.inicio=v;continue}if(k==='nombre'){S.nombre=v.trim();continue}if(k==='tema'){S.tema=v;aplicarTema();continue}const p=k.split('.');let o=S;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=num(v)}
   const tot=S.bolsas.reduce((a,b)=>a+num(b.pct),0);if(Math.round(tot)!==100)alert(`Ojo: los porcentajes de las bolsas suman ${tot}%, deberían sumar 100%.`);save();toast('Ajustes guardados')}
  render()});
 
