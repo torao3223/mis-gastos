@@ -194,7 +194,7 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <div class="toast" id="toast"></div>
 <script>
 'use strict';
-const VERSION='17';
+const VERSION='18';
 const KEY='misgastos_v1';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -595,7 +595,7 @@ function generarXlsx(){const wb=XLSX.utils.book_new();
  for(const[n,rows]of Object.entries(hojasDatos()))XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{'(vacío)':''}]),n);
  XLSX.writeFile(wb,`gastos-${ymd(new Date())}.xlsx`)}
 function hojasDatos(){const H={},ch=cargosPresupuesto(),add=(n,rows)=>{H[n]=rows};
- add('Movimientos',S.movs.slice().sort((a,b)=>(a.fecha||a.primerMes).localeCompare(b.fecha||b.primerMes)).map(m=>({Fecha:m.fecha||m.primerMes,Tipo:{gasto:'Gasto',pago:'Pago de tarjeta',abono:'Me pagaron',deuda:'Deuda previa'}[m.tipo],
+ add('Movimientos',S.movs.slice().sort((a,b)=>(a.fecha||a.primerMes).localeCompare(b.fecha||b.primerMes)).map(m=>({Fecha:m.fecha||(m.primerMes+'-01'),Tipo:{gasto:'Gasto',pago:'Pago de tarjeta',abono:'Me pagaron',deuda:'Deuda previa'}[m.tipo],
   Categoria:m.tipo==='gasto'?catLabel(m.cat):'',Monto:movMonto(m),'Mi parte':m.tipo==='gasto'?propio(m):'',Forma_pago:medioLabel(m.medio||m.tarjeta||''),Meses:m.meses||m.restantes||'',
   'Para otra persona':m.quien||'','Me deben':num(m.compartido)||'',Deudor:m.deudor||m.persona||'',Nota:m.nota||''})));
  const fin=addM(curMes(),0),rows=[];for(let mes=S.inicio;mes<=fin;mes=addM(mes,1)){const r=resumen(mes,ch);
