@@ -194,7 +194,7 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <div class="toast" id="toast"></div>
 <script>
 'use strict';
-const VERSION='15';
+const VERSION='16';
 const KEY='misgastos_v1';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -513,11 +513,26 @@ function render(){document.getElementById('titulo').textContent=TIT[tab];
  document.getElementById('mesBox').classList.toggle('hidden',!(tab==='inicio'||(tab==='mas'&&sub==='movs')));
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
  document.getElementById('view').innerHTML=V[tab]();
- if(tab==='agregar'&&addTipo==='pago')sugPago()}
+ if(tab==='agregar'){restaurarBorrador();if(addTipo==='pago')sugPago()}}
 function sugPago(){const s=document.querySelector('[name=tarjeta]');if(!s)return;const t=tarjeta(s.value),e=estadoTarjeta(t);
  document.getElementById('pagoSug').innerHTML=e.prox?`Próximo pago: <b>${money(e.pend[e.prox])}</b> (${mLabel(e.prox)})`:'Sin pagos pendientes.'}
 
-document.addEventListener('click',ev=>{const tb=ev.target.closest('[data-tab]');if(tb){tab=tb.dataset.tab;sub=null;if(tab==='agregar')addTipo='gasto';render();scrollTo(0,0);return}
+/* Borradores de Agregar: lo que escribes se conserva si cambias de sección o cierras la app, hasta que lo guardas */
+const BKEY='misgastos_borrador',FORMS_AGR=['gasto','pago','abono','deuda'];
+let BOR=(()=>{try{return JSON.parse(localStorage.getItem(BKEY))||{}}catch(e){return{}}})();
+function guardarBorradores(){try{localStorage.setItem(BKEY,JSON.stringify(BOR))}catch(e){}}
+function capturarBorrador(fm){const t=fm.dataset.form;if(!FORMS_AGR.includes(t))return;const o={};
+ for(const el of fm.elements){if(!el.name||el.type==='submit')continue;if(el.type==='radio'){if(el.checked)o[el.name]=el.value}else o[el.name]=el.value}
+ BOR[t]=o;BOR._tipo=t;guardarBorradores()}
+function borrarBorrador(t){delete BOR[t];if(BOR._tipo===t)delete BOR._tipo;guardarBorradores()}
+function restaurarBorrador(){const fm=document.querySelector('#view form[data-form]'),o=fm&&BOR[fm.dataset.form];if(!o)return;
+ for(const el of fm.elements){if(!el.name||!(el.name in o))continue;if(el.type==='radio')el.checked=el.value===o[el.name];else el.value=o[el.name]}
+ // Mostrar las secciones que dependen de lo elegido (meses, compartido, otra persona)
+ const md=fm.querySelector('[data-act=medio]');if(md)document.getElementById('mesesBox').classList.toggle('hidden',!tarjeta(md.value));
+ const pr=fm.querySelector('[name=para]:checked');if(pr){document.getElementById('compBox').classList.toggle('hidden',pr.value!=='comp');document.getElementById('otroBox').classList.toggle('hidden',pr.value!=='otro')}}
+document.addEventListener('input',ev=>{const fm=ev.target.closest&&ev.target.closest('form[data-form]');if(fm)capturarBorrador(fm)});
+document.addEventListener('change',ev=>{const fm=ev.target.closest&&ev.target.closest('form[data-form]');if(fm)capturarBorrador(fm)});
+document.addEventListener('click',ev=>{const tb=ev.target.closest('[data-tab]');if(tb){tab=tb.dataset.tab;sub=null;if(tab==='agregar')addTipo=BOR._tipo||'gasto';render();scrollTo(0,0);return}
  const a=ev.target.closest('[data-act]');if(!a||a.tagName==='SELECT'||a.tagName==='INPUT')return;const k=a.dataset.k;
  switch(a.dataset.act){
   case'mes':mesVer=addM(mesVer,+k);render();break;
@@ -533,6 +548,8 @@ document.addEventListener('click',ev=>{const tb=ev.target.closest('[data-tab]');
   case'backup':descargar(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),`respaldo-gastos-${ymd(new Date())}.json`);break;
  }});
 document.addEventListener('change',ev=>{const a=ev.target.dataset.act;
+ // El tema se aplica en cuanto lo eliges, sin tener que bajar a "Guardar ajustes"
+ if(ev.target.name==='tema'&&ev.target.closest('[data-form=ajustes]')){S.tema=ev.target.value;save();aplicarTema();toast('Tema aplicado ✦')}
  if(a==='medio'){document.getElementById('mesesBox').classList.toggle('hidden',!tarjeta(ev.target.value))}
  if(a==='para'){const v=ev.target.value;document.getElementById('compBox').classList.toggle('hidden',v!=='comp');document.getElementById('otroBox').classList.toggle('hidden',v!=='otro')}
  if(a==='pagoT')sugPago();
@@ -554,11 +571,11 @@ document.addEventListener('submit',ev=>{ev.preventDefault();const fm=ev.target,F
   if(F.para==='comp'){const c=num(F.compartido);if(c<=0||c>=monto)return alert('Lo que te deben debe ser mayor a 0 y menor al total.');if(!F.deudor.trim())return alert('Escribe quién te debe.');m.compartido=c;m.deudor=F.deudor.trim()}
   if(m.cat==='ahorro:fijo'&&!m.quien){const s=saldos(cargosPresupuesto());const queda=s.af-propio(m);
    if(queda<S.ahorroFijo.minimo&&!confirm(`Con esto tu ahorro fijo quedaría en ${money(queda)}, debajo de tu mínimo de ${money(S.ahorroFijo.minimo)}. ¿Continuar?`))return}
-  S.movs.push(m);save();toast('Gasto guardado');tab='inicio';mesVer=m.fecha.slice(0,7)}
- if(tipo==='pago'){const monto=num(F.monto);if(monto<=0)return alert('Escribe un monto.');S.movs.push({id:uid(),tipo:'pago',tarjeta:F.tarjeta,monto,fecha:F.fecha});save();toast('Pago registrado');tab='tarjetas'}
- if(tipo==='abono'){const monto=num(F.monto);if(monto<=0)return alert('Escribe un monto.');S.movs.push({id:uid(),tipo:'abono',persona:F.persona,monto,fecha:F.fecha});save();toast('Registrado')}
+  S.movs.push(m);save();borrarBorrador('gasto');toast('Gasto guardado');tab='inicio';mesVer=m.fecha.slice(0,7)}
+ if(tipo==='pago'){const monto=num(F.monto);if(monto<=0)return alert('Escribe un monto.');S.movs.push({id:uid(),tipo:'pago',tarjeta:F.tarjeta,monto,fecha:F.fecha});save();borrarBorrador('pago');toast('Pago registrado');tab='tarjetas'}
+ if(tipo==='abono'){const monto=num(F.monto);if(monto<=0)return alert('Escribe un monto.');S.movs.push({id:uid(),tipo:'abono',persona:F.persona,monto,fecha:F.fecha});save();borrarBorrador('abono');toast('Registrado')}
  if(tipo==='deuda'){const men=num(F.mensualidad),r=parseInt(F.restantes);if(men<=0||!(r>0))return alert('Revisa la mensualidad y los pagos que faltan.');
-  S.movs.push({id:uid(),tipo:'deuda',tarjeta:F.tarjeta,mensualidad:men,restantes:r,primerMes:F.primerMes,nota:F.nota.trim(),quien:F.quien.trim()||undefined});save();toast('Deuda guardada')}
+  S.movs.push({id:uid(),tipo:'deuda',tarjeta:F.tarjeta,mensualidad:men,restantes:r,primerMes:F.primerMes,nota:F.nota.trim(),quien:F.quien.trim()||undefined});save();borrarBorrador('deuda');toast('Deuda guardada')}
  if(tipo==='confirmar'){const d=parseInt(F.corte);if(!(d>=1&&d<=31))return alert('Día de corte inválido.');S.confirmados[fm.dataset.t+'|'+F.mes]={corte:d,pago:F.pago};save();toast('Fechas guardadas')}
  if(tipo==='cumples'){S.cumples.forEach(c=>{c.nombre=(F['n_'+c.id]||'').trim();c.monto=num(F['m_'+c.id])});save();toast('Guardado')}
  if(tipo==='ajustes'){for(const[k,v]of Object.entries(F)){if(k==='inicio'){if(v)S.inicio=v;continue}if(k==='nombre'){S.nombre=v.trim();continue}if(k==='tema'){S.tema=v;aplicarTema();continue}const p=k.split('.');let o=S;for(let i=0;i<p.length-1;i++)o=o[p[i]];o[p.at(-1)]=num(v)}
