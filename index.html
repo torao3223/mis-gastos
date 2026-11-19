@@ -194,7 +194,8 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <div class="toast" id="toast"></div>
 <script>
 'use strict';
-const VERSION='18';
+const VERSION='19';
+const VER_TXT=(VERSION/10).toFixed(1); // 19 → "1.9"
 const KEY='misgastos_v1';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -465,7 +466,7 @@ V.ahorro=()=>{const s=saldos(cargosPresupuesto());const af=s.af,min=S.ahorroFijo
 V.mas=()=>{if(sub)return SUB[sub]();
  return `<div class="menu">${[['movs','Movimientos del mes'],['prestamos','Préstamos y compartidos'],['cumples','Cumpleaños'],['ajustes','Ajustes y montos'],['exportar','Exportar a Sheets / respaldo']].map(([k,v])=>`<button data-act="sub" data-k="${k}"><span>${v}</span><span class="mut">›</span></button>`).join('')}</div>
   <p class="mut">Los datos se guardan solo en este dispositivo. Exporta un respaldo de vez en cuando.</p>
-  <p class="mut" style="text-align:center">Versión ${VERSION}</p>`};
+  <p class="mut" style="text-align:center">Versión ${VER_TXT}</p>`};
 const back=t=>`<button class="btn sec small" data-act="sub" data-k="">‹ Volver</button> <b style="margin-left:6px">${t}</b>`;
 const movDesc=m=>m.tipo==='gasto'?`${esc(m.nota||catLabel(m.cat))}<br><span class="mut">${fLabel(m.fecha)} · ${catLabel(m.cat)} · ${medioLabel(m.medio)}${m.meses>1?` · ${m.meses} MSI`:''}${m.quien?` · de ${esc(m.quien)}`:''}${num(m.compartido)>0?` · me deben ${money(m.compartido)}`:''}</span>`
  :m.tipo==='pago'?`Pago a ${medioLabel(m.tarjeta)}<br><span class="mut">${fLabel(m.fecha)} · no es gasto</span>`
@@ -620,7 +621,7 @@ function sincronizar(manual){const u=S.sync&&S.sync.url;if(!u){if(manual)alert('
  const hojas={};for(const[n,rows]of Object.entries(hojasDatos())){const cols=[...new Set(rows.flatMap(r=>Object.keys(r)))];hojas[n]=rows.length?[cols,...rows.map(r=>cols.map(c=>r[c]??''))]:[['(vacío)']]}
  if(manual)toast('Enviando a Google Sheets…');
  // text/plain evita el permiso previo (CORS) que Apps Script no maneja
- return fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({clave:S.sync.clave,app:'Tomin 日課',version:VERSION,hojas})})
+ return fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({clave:S.sync.clave,app:'Tomin 日課',version:VER_TXT,hojas})})
   .then(r=>r.json()).then(j=>{if(!j.ok)throw new Error(j.error||'error');syncGuardarEstado({ok:Date.now(),error:''});if(manual)toast('Google Sheets al día ✦');if(sub==='exportar')render()})
   .catch(e=>{syncGuardarEstado({error:String(e.message||e),fallo:Date.now()});if(manual)alert(e.message==='clave'?'La clave no coincide con la del script.':'No se pudo enviar. Revisa el enlace y que el script esté publicado para "Cualquier usuario".');if(sub==='exportar')render()})}
 function haceCuanto(t){const m=Math.round((Date.now()-t)/6e4);return m<1?'hace un momento':m<60?`hace ${m} min`:m<1440?`hace ${Math.round(m/60)} h`:`hace ${Math.round(m/1440)} d`}
