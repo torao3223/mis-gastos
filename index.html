@@ -194,13 +194,15 @@ nav button.add b{transition:transform 160ms var(--ease-out),box-shadow 160ms var
 <div class="toast" id="toast"></div>
 <script>
 'use strict';
-const VERSION='16';
+const VERSION='17';
 const KEY='misgastos_v1';
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const ym=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}`;
 const addM=(m,k)=>{let[y,mo]=m.split('-').map(Number);mo+=k;y+=Math.floor((mo-1)/12);mo=((mo-1)%12+12)%12+1;return `${y}-${pad(mo)}`};
-const money=n=>(n<-0.5?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('es-MX');
+// Muestra centavos solo cuando los hay ($350 / $349.50)
+const r2=n=>Math.round((+n||0)*100)/100;
+const money=n=>{const a=Math.abs(r2(n)),c=Math.abs(a-Math.round(a))>0.004;return(r2(n)<0?'-':'')+'$'+a.toLocaleString('es-MX',{minimumFractionDigits:c?2:0,maximumFractionDigits:2})};
 const MES=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 const mLabel=m=>{const[y,mo]=m.split('-');return MES[mo-1]+' '+y};
 const fLabel=f=>{const[y,m,d]=f.split('-');return +d+' '+MES[m-1]};
@@ -597,11 +599,11 @@ function hojasDatos(){const H={},ch=cargosPresupuesto(),add=(n,rows)=>{H[n]=rows
   Categoria:m.tipo==='gasto'?catLabel(m.cat):'',Monto:movMonto(m),'Mi parte':m.tipo==='gasto'?propio(m):'',Forma_pago:medioLabel(m.medio||m.tarjeta||''),Meses:m.meses||m.restantes||'',
   'Para otra persona':m.quien||'','Me deben':num(m.compartido)||'',Deudor:m.deudor||m.persona||'',Nota:m.nota||''})));
  const fin=addM(curMes(),0),rows=[];for(let mes=S.inicio;mes<=fin;mes=addM(mes,1)){const r=resumen(mes,ch);
-  rows.push({Mes:mes,Sueldo:S.ingreso,'Fijos presupuesto':r.fijosP,'Fijos gastado':Math.round(r.gF),Fondos:r.fondosP,'Deudas previas':Math.round(r.deudas),'Ahorro fijo':r.af,'Gustos tope':r.gTope,'Gustos gastado':Math.round(r.gG),'Otros':Math.round(r.gO),'Sobrante a ahorro':Math.round(r.libre)})}
+  rows.push({Mes:mes,Sueldo:S.ingreso,'Fijos presupuesto':r.fijosP,'Fijos gastado':r2(r.gF),Fondos:r.fondosP,'Deudas previas':r2(r.deudas),'Ahorro fijo':r.af,'Gustos tope':r.gTope,'Gustos gastado':r2(r.gG),'Otros':r2(r.gO),'Sobrante a ahorro':r2(r.libre)})}
  add('Resumen mensual',rows);
- add('Tarjetas',S.tarjetas.flatMap(t=>{const e=estadoTarjeta(t);return e.meses.map(m=>({Tarjeta:t.nombre,'Mes de pago':m,'Fecha límite':fechaLimite(t,m).f,Cargos:Math.round(e.porMes[m]),Pendiente:Math.round(e.pend[m])}))}));
- add('Préstamos',Object.entries(prestamos()).map(([n,v])=>({Persona:n,'Te debe':Math.round(v)})));
- const s=saldos(ch);add('Ahorro',[{Bolsa:'Ahorro fijo',Saldo:Math.round(s.af),Meta:''},...S.bolsas.map(b=>({Bolsa:b.nombre,Saldo:Math.round(s.b[b.id]),Meta:b.meta})),...S.fondos.map(f=>({Bolsa:'Fondo '+f.nombre,Saldo:Math.round(s.f[f.id]),Meta:f.tope||''}))]);
+ add('Tarjetas',S.tarjetas.flatMap(t=>{const e=estadoTarjeta(t);return e.meses.map(m=>({Tarjeta:t.nombre,'Mes de pago':m,'Fecha límite':fechaLimite(t,m).f,Cargos:r2(e.porMes[m]),Pendiente:r2(e.pend[m])}))}));
+ add('Préstamos',Object.entries(prestamos()).map(([n,v])=>({Persona:n,'Te debe':r2(v)})));
+ const s=saldos(ch);add('Ahorro',[{Bolsa:'Ahorro fijo',Saldo:r2(s.af),Meta:''},...S.bolsas.map(b=>({Bolsa:b.nombre,Saldo:r2(s.b[b.id]),Meta:b.meta})),...S.fondos.map(f=>({Bolsa:'Fondo '+f.nombre,Saldo:r2(s.f[f.id]),Meta:f.tope||''}))]);
  return H}
 
 /* ---------- Google Sheets: la app manda tus datos a tu propio Apps Script ---------- */
